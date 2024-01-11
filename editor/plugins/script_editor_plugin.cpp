@@ -548,7 +548,7 @@ void ScriptEditor::_set_breakpoint(Ref<RefCounted> p_script, int p_line, bool p_
 		}
 		state["breakpoints"] = breakpoints;
 		script_editor_cache->set_value(scr->get_path(), "state", state);
-		EditorDebuggerNode::get_singleton()->set_breakpoint(scr->get_path(), p_line + 1, false);
+		EditorDebuggerNode::get_singleton()->set_breakpoint(scr->get_path(), p_line + 1, p_enabled);
 	}
 }
 
@@ -1427,11 +1427,7 @@ void ScriptEditor::_menu_option(int p_option) {
 						path = path.get_slice("::", 0); // Show the scene instead.
 					}
 
-					FileSystemDock *file_system_dock = FileSystemDock::get_singleton();
-					file_system_dock->navigate_to_path(path);
-					// Ensure that the FileSystem dock is visible.
-					TabContainer *dock_tab_container = (TabContainer *)file_system_dock->get_parent_control();
-					dock_tab_container->set_current_tab(dock_tab_container->get_tab_idx_from_control(file_system_dock));
+					FileSystemDock::get_singleton()->navigate_to_path(path);
 				}
 			} break;
 			case CLOSE_DOCS: {
@@ -2967,7 +2963,7 @@ bool ScriptEditor::can_drop_data_fw(const Point2 &p_point, const Variant &p_data
 		}
 
 		for (int i = 0; i < files.size(); i++) {
-			String file = files[i];
+			const String &file = files[i];
 			if (file.is_empty() || !FileAccess::exists(file)) {
 				continue;
 			}
@@ -3047,7 +3043,7 @@ void ScriptEditor::drop_data_fw(const Point2 &p_point, const Variant &p_data, Co
 		}
 		int num_tabs_before = tab_container->get_tab_count();
 		for (int i = 0; i < files.size(); i++) {
-			String file = files[i];
+			const String &file = files[i];
 			if (file.is_empty() || !FileAccess::exists(file)) {
 				continue;
 			}
@@ -3390,7 +3386,6 @@ void ScriptEditor::_help_class_goto(const String &p_desc) {
 
 	eh->set_name(cname);
 	tab_container->add_child(eh);
-	_go_to_tab(tab_container->get_tab_count() - 1);
 	eh->go_to_help(p_desc);
 	eh->connect("go_to_help", callable_mp(this, &ScriptEditor::_help_class_goto));
 	_add_recent_script(eh->get_class());
@@ -3864,6 +3859,7 @@ ScriptEditor::ScriptEditor(WindowWrapper *p_wrapper) {
 	scripts_vbox->add_child(filter_scripts);
 
 	script_list = memnew(ItemList);
+	script_list->set_auto_translate(false);
 	scripts_vbox->add_child(script_list);
 	script_list->set_custom_minimum_size(Size2(150, 60) * EDSCALE); //need to give a bit of limit to avoid it from disappearing
 	script_list->set_v_size_flags(SIZE_EXPAND_FILL);
@@ -3908,6 +3904,7 @@ ScriptEditor::ScriptEditor(WindowWrapper *p_wrapper) {
 	overview_vbox->add_child(filter_methods);
 
 	members_overview = memnew(ItemList);
+	members_overview->set_auto_translate(false);
 	overview_vbox->add_child(members_overview);
 
 	members_overview->set_allow_reselect(true);
@@ -3916,6 +3913,7 @@ ScriptEditor::ScriptEditor(WindowWrapper *p_wrapper) {
 	members_overview->set_allow_rmb_select(true);
 
 	help_overview = memnew(ItemList);
+	help_overview->set_auto_translate(false);
 	overview_vbox->add_child(help_overview);
 	help_overview->set_allow_reselect(true);
 	help_overview->set_custom_minimum_size(Size2(0, 60) * EDSCALE); //need to give a bit of limit to avoid it from disappearing

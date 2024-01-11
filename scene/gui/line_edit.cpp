@@ -624,7 +624,12 @@ void LineEdit::gui_input(const Ref<InputEvent> &p_event) {
 			int prev_len = text.length();
 			insert_text_at_caret(ucodestr);
 			if (text.length() != prev_len) {
-				_text_changed();
+				if (!text_changed_dirty) {
+					if (is_inside_tree()) {
+						callable_mp(this, &LineEdit::_text_changed).call_deferred();
+					}
+					text_changed_dirty = true;
+				}
 			}
 			accept_event();
 			return;
@@ -1713,6 +1718,12 @@ void LineEdit::set_caret_column(int p_column) {
 	} else if (MAX(primary_caret_offset.x, primary_caret_offset.y) >= ofs_max) {
 		scroll_offset += ofs_max - MAX(primary_caret_offset.x, primary_caret_offset.y);
 	}
+
+	// Scroll to show as much text as possible
+	if (text_width + scroll_offset + x_ofs < ofs_max) {
+		scroll_offset = ofs_max - x_ofs - text_width;
+	}
+
 	scroll_offset = MIN(0, scroll_offset);
 
 	queue_redraw();
@@ -1914,12 +1925,15 @@ bool LineEdit::is_secret() const {
 }
 
 void LineEdit::set_secret_character(const String &p_string) {
-	if (secret_character == p_string) {
+	String c = p_string;
+	if (c.length() > 1) {
+		WARN_PRINT("Secret character must be exactly one character long (" + itos(c.length()) + " characters given).");
+		c = c.left(1);
+	}
+	if (secret_character == c) {
 		return;
 	}
-
-	secret_character = p_string;
-	update_configuration_warnings();
+	secret_character = c;
 	_shape();
 	queue_redraw();
 }
@@ -2285,14 +2299,8 @@ void LineEdit::_shape() {
 	if (text.length() == 0 && ime_text.length() == 0) {
 		t = placeholder_translated;
 	} else if (pass) {
-		// TODO: Integrate with text server to add support for non-latin scripts.
-		// Allow secret_character as empty strings, act like if a space was used as a secret character.
-		String secret = " ";
-		// Allow values longer than 1 character in the property, but trim characters after the first one.
-		if (!secret_character.is_empty()) {
-			secret = secret_character.left(1);
-		}
-		t = secret.repeat(text.length() + ime_text.length());
+		String s = (secret_character.length() > 0) ? secret_character.left(1) : U"•";
+		t = s.repeat(text.length() + ime_text.length());
 	} else {
 		if (ime_text.length() > 0) {
 			t = text.substr(0, caret_column) + ime_text + text.substr(caret_column, text.length());
