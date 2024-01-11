@@ -204,7 +204,9 @@ void RayCast3D::_notification(int p_what) {
 			if (get_tree()->is_debugging_collisions_hint()) {
 				_update_debug_shape();
 			}
-
+			if (game_enabled) {
+				_update_debug_shape();
+			}
 			if (Object::cast_to<CollisionObject3D>(get_parent())) {
 				if (exclude_parent_body) {
 					exclude.insert(Object::cast_to<CollisionObject3D>(get_parent())->get_rid());
